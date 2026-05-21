@@ -1,4 +1,4 @@
-# docker-vps-stack
+# homelab-in-a-box
 
 Public template for a **Debian VPS** Docker homelab: **Cloudflare Tunnel** ingress (no open firewall ports), **Traefik**, **Portainer**, **Traefik Manager**, and optional **Authelia** (1FA).
 
