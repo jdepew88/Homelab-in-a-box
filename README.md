@@ -43,14 +43,14 @@ Each user runs the setup scripts locally on their VPS; nothing sensitive is stor
 ```bash
 sudo apt-get update && sudo apt-get install -y git
 sudo bash -c 'curl -fsSL https://get.docker.com | sh'   # or use install-server.sh below
-git clone https://github.com/YOUR_USER/docker-vps-stack.git /home/joe/docker-vps-stack
+git clone https://github.com/jdepew88/docker-vps-stack.git /home/joe/docker-vps-stack
 sudo chown -R joe:joe /home/joe/docker-vps-stack
 ```
 
 Or use the install script (Docker + `cloudflared`):
 
 ```bash
-git clone https://github.com/YOUR_USER/docker-vps-stack.git /home/joe/docker-vps-stack
+git clone https://github.com/jdepew88/docker-vps-stack.git /home/joe/docker-vps-stack
 cd /home/joe/docker-vps-stack
 sudo bash scripts/install-server.sh
 ```
