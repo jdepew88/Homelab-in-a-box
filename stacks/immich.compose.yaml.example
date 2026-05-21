@@ -1,0 +1,12 @@
+# Future: Immich with S3 (MinIO-compatible) instead of local VM storage
+# 1. Create R2/S3 bucket + IAM-style keys in Cloudflare or AWS
+# 2. cp immich.compose.yaml.example compose.stacks/immich.compose.yaml
+# 3. Fill IMMICH_* vars in .env, then: docker compose -f compose.yaml -f compose.stacks/immich.compose.yaml --profile immich up -d
+#
+# See README "Immich + object storage" for bucket layout and backup notes.
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    profiles: [immich]
+    # ... see official Immich compose; mount only config locally, library on S3

@@ -1,0 +1,4 @@
+-- Created on first postgres start
+CREATE USER authelia WITH PASSWORD '__AUTHELIA_DB_PASSWORD__';
+CREATE DATABASE authelia OWNER authelia;
+GRANT ALL PRIVILEGES ON DATABASE authelia TO authelia;

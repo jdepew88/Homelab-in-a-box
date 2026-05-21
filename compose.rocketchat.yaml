@@ -1,0 +1,66 @@
+# Rocket.Chat — enable with: docker compose --profile rocketchat up -d
+# Docs: https://docs.rocket.chat/docs/deploy-with-docker-docker-compose
+
+services:
+  rocketchat-mongodb:
+    image: mongo:7
+    container_name: rocketchat-mongodb
+    restart: unless-stopped
+    profiles: [rocketchat]
+    command: mongod --oplogSize 128 --replSet rs0
+    volumes:
+      - ${APPDATA_ROOT}/rocketchat/mongodb:/data/db
+    networks:
+      - proxy
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  rocketchat-mongo-init:
+    image: mongo:7
+    container_name: rocketchat-mongo-init
+    profiles: [rocketchat]
+    depends_on:
+      rocketchat-mongodb:
+        condition: service_healthy
+    entrypoint: >
+      bash -c "
+        mongosh --host rocketchat-mongodb:27017 --eval '
+          try { rs.status() } catch (e) {
+            rs.initiate({_id:\"rs0\", members:[{_id:0, host:\"rocketchat-mongodb:27017\"}]})
+          }
+        '"
+    networks:
+      - proxy
+    restart: "no"
+
+  rocketchat:
+    image: ${ROCKETCHAT_IMAGE}
+    container_name: rocketchat
+    restart: unless-stopped
+    profiles: [rocketchat]
+    environment:
+      MONGO_URL: mongodb://rocketchat-mongodb:27017/rocketchat?replicaSet=rs0
+      MONGO_OPLOG_URL: mongodb://rocketchat-mongodb:27017/local?replicaSet=rs0
+      ROOT_URL: ${ROCKETCHAT_ROOT_URL}
+      PORT: 3000
+      DEPLOY_METHOD: docker
+      DEPLOY_PLATFORM: linux
+      REG_TOKEN: ${ROCKETCHAT_REG_TOKEN:-}
+      OVERWRITE_SETTING_Show_Setup_Wizard: completed
+    volumes:
+      - ${APPDATA_ROOT}/rocketchat/uploads:/app/uploads
+    networks:
+      - proxy
+    depends_on:
+      rocketchat-mongodb:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.rocketchat.rule=Host(`${SUBDOMAIN_ROCKETCHAT}.${DOMAIN}`)
+      - traefik.http.routers.rocketchat.entrypoints=web
+      - traefik.http.routers.rocketchat.middlewares=authelia@file
+      - traefik.http.services.rocketchat.loadbalancer.server.port=3000

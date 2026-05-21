@@ -1,0 +1,12 @@
+# Deployment metadata — safe to keep without secrets (setup.py fills this)
+domain: __DOMAIN__
+cloudflare_email: __CF_EMAIL__
+compose_home: /home/joe/docker-vps-stack
+appdata_root: /opt/appdata/docker-apps
+timezone: America/New_York
+subdomains:
+  auth: auth
+  portainer: port
+  traefik: traefik
+  manager: manager
+  rocketchat: sub

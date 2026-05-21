@@ -1,0 +1,16 @@
+# Copy to compose.stacks/ and register with scripts/add_stack.py
+# Pattern for adding apps behind Traefik + Authelia (no host ports)
+
+services:
+  example-app:
+    image: nginx:alpine
+    container_name: example-app
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.example-app.rule=Host(`app.__DOMAIN__`)
+      - traefik.http.routers.example-app.entrypoints=web
+      - traefik.http.routers.example-app.middlewares=authelia@file
+      - traefik.http.services.example-app.loadbalancer.server.port=80

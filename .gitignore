@@ -1,0 +1,9 @@
+.env
+config.yaml
+compose.auth-overrides.yaml
+*.local
+__pycache__/
+*.pyc
+secrets/
+cloudflared/credentials.json
+**/acme.json

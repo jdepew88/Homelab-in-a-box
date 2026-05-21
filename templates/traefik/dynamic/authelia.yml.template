@@ -1,0 +1,12 @@
+# Forward-auth middleware for protected routes
+http:
+  middlewares:
+    authelia:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?rd=https://__SUBDOMAIN_AUTH__.__DOMAIN__/"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - Remote-User
+          - Remote-Groups
+          - Remote-Name
+          - Remote-Email

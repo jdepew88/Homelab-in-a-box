@@ -1,0 +1,19 @@
+# docker-vps-stack
+#
+# Phase 1 (bootstrap — remote access first):
+#   python3 scripts/setup-bootstrap.py
+#   ./scripts/compose.sh up -d
+#
+# Phase 2 (Authelia 1FA):
+#   python3 scripts/setup-authelia.py
+#   ./scripts/compose.sh --profile auth up -d
+#
+# Optional apps:
+#   ./scripts/compose.sh --profile rocketchat up -d
+
+name: vps-stack
+
+include:
+  - path: compose.bootstrap.yaml
+  - path: compose.auth.yaml
+  - path: compose.rocketchat.yaml

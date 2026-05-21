@@ -1,0 +1,10 @@
+# Cloudflare Tunnel — created by scripts/setup.py (fresh tunnel, not reused from local)
+tunnel: __TUNNEL_ID__
+credentials-file: /etc/cloudflared/__TUNNEL_ID__.json
+
+ingress:
+  - hostname: "*.__DOMAIN__"
+    service: http://traefik:80
+  - hostname: "__DOMAIN__"
+    service: http://traefik:80
+  - service: http_status:404

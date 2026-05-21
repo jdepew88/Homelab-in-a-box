@@ -1,0 +1,118 @@
+# Phase 1 — ingress only (no Authelia). Remote access via Cloudflare Tunnel first.
+# After setup-bootstrap.py:  docker compose up -d
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
+    networks:
+      - proxy
+    depends_on:
+      traefik:
+        condition: service_started
+    profiles:
+      - tunnel-token
+
+  cloudflared-config:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ${APPDATA_ROOT}/cloudflared:/etc/cloudflared:ro
+    networks:
+      - proxy
+    depends_on:
+      traefik:
+        condition: service_started
+    profiles:
+      - tunnel-config
+
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      CF_API_EMAIL: ${CF_EMAIL}
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APPDATA_ROOT}/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ${APPDATA_ROOT}/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ${APPDATA_ROOT}/traefik/logs:/var/log/traefik
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-dashboard.rule=Host(`${SUBDOMAIN_TRAEFIK}.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard.entrypoints=web
+      - traefik.http.routers.traefik-dashboard.service=api@internal
+
+  socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    container_name: socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket-proxy-net
+
+  traefik-manager:
+    image: ghcr.io/chr0nzz/traefik-manager:latest
+    container_name: traefik-manager
+    restart: unless-stopped
+    environment:
+      COOKIE_SECURE: ${TM_COOKIE_SECURE:-true}
+      CONFIG_DIR: /app/config/traefik-dynamic
+      STATIC_CONFIG_PATH: /app/traefik.yml
+      RESTART_METHOD: proxy
+      DOCKER_HOST: tcp://socket-proxy:2375
+      TRAEFIK_CONTAINER: traefik
+    volumes:
+      - ${APPDATA_ROOT}/traefik-manager/config:/app/config
+      - ${APPDATA_ROOT}/traefik-manager/backups:/app/backups
+      - ${APPDATA_ROOT}/traefik/dynamic:/app/config/traefik-dynamic
+      - ${APPDATA_ROOT}/traefik/traefik.yml:/app/traefik.yml
+      - ${APPDATA_ROOT}/traefik/logs/access.log:/app/logs/access.log:ro
+    networks:
+      - proxy
+      - socket-proxy-net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-manager.rule=Host(`${SUBDOMAIN_MANAGER}.${DOMAIN}`)
+      - traefik.http.routers.traefik-manager.entrypoints=web
+      - traefik.http.services.traefik-manager.loadbalancer.server.port=5000
+    depends_on:
+      - traefik
+      - socket-proxy
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${APPDATA_ROOT}/portainer/data:/data
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.portainer.rule=Host(`${SUBDOMAIN_PORTAINER}.${DOMAIN}`)
+      - traefik.http.routers.portainer.entrypoints=web
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+
+networks:
+  proxy:
+    name: proxy
+    driver: bridge
+  socket-proxy-net:
+    internal: true

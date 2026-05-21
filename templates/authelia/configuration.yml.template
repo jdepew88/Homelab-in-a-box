@@ -1,0 +1,65 @@
+---
+# Authelia — based on https://docs.ibracorp.io/docs/security/authelia
+# Placeholders filled by scripts/setup.py
+
+theme: dark
+
+server:
+  address: 'tcp://0.0.0.0:9091/'
+
+log:
+  level: info
+
+identity_validation:
+  reset_password:
+    jwt_secret: '__AUTHELIA_JWT_SECRET__'
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 3
+      key_length: 32
+      salt_length: 16
+      memory: 65536
+      parallelism: 4
+
+# 1FA only: every app hostname requires username/password; login portal is bypass
+access_control:
+  default_policy: deny
+  rules:
+    - domain: '__SUBDOMAIN_AUTH__.__DOMAIN__'
+      policy: bypass
+    - domain: '*.__DOMAIN__'
+      policy: one_factor
+
+session:
+  name: authelia_session
+  secret: '__AUTHELIA_SESSION_SECRET__'
+  expiration: 1h
+  inactivity: 15m
+  domain: '__DOMAIN__'
+  redis:
+    host: redis
+    port: 6379
+    password: '__REDIS_PASSWORD__'
+
+regulation:
+  max_retries: 3
+  find_time: 2m
+  ban_time: 5m
+
+storage:
+  encryption_key: '__AUTHELIA_STORAGE_ENCRYPTION_KEY__'
+  postgres:
+    host: postgres
+    port: 5432
+    database: authelia
+    schema: public
+    username: authelia
+    password: '__AUTHELIA_DB_PASSWORD__'
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt
