@@ -1,4 +1,4 @@
-# Cloudflare Tunnel — created by scripts/setup.py (fresh tunnel, not reused from local)
+# Cloudflare Tunnel — created by scripts/setup-bootstrap.py (config mode)
 tunnel: __TUNNEL_ID__
 credentials-file: /etc/cloudflared/__TUNNEL_ID__.json
 

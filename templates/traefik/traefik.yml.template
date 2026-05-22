@@ -1,4 +1,4 @@
-# Static Traefik config — placeholders replaced by scripts/setup.py
+# Static Traefik config — placeholders replaced by scripts/setup-bootstrap.py
 #
 # domain: __DOMAIN__
 # cloudflare_email: __CF_EMAIL__

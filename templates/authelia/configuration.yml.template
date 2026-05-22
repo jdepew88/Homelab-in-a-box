@@ -1,6 +1,6 @@
 ---
 # Authelia — based on https://docs.ibracorp.io/docs/security/authelia
-# Placeholders filled by scripts/setup.py
+# Placeholders filled by scripts/setup-authelia.py
 
 theme: dark
 

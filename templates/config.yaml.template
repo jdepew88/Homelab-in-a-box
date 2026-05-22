@@ -1,7 +1,7 @@
-# Deployment metadata — safe to keep without secrets (setup.py fills this)
+# Deployment metadata — safe to keep without secrets (setup-bootstrap.py fills this)
 domain: __DOMAIN__
 cloudflare_email: __CF_EMAIL__
-compose_home: /home/joe/docker-vps-stack
+compose_home: /home/joe/homelab-in-a-box
 appdata_root: /opt/appdata/docker-apps
 timezone: America/New_York
 subdomains:

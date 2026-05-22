@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Debian VPS bootstrap — run as root:
+# Homelab-in-a-box — Debian VPS bootstrap (run as root):
 #   sudo bash scripts/install-server.sh
 set -euo pipefail
 
 DEPLOY_USER="${DEPLOY_USER:-joe}"
-COMPOSE_HOME="${COMPOSE_HOME:-/home/${DEPLOY_USER}/docker-vps-stack}"
+COMPOSE_HOME="${COMPOSE_HOME:-/home/${DEPLOY_USER}/homelab-in-a-box}"
 APPDATA_ROOT="${APPDATA_ROOT:-/opt/appdata/docker-apps}"
 
 if [[ -f /etc/os-release ]]; then
@@ -29,7 +29,7 @@ if ! command -v docker >/dev/null 2>&1; then
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
 
-echo "==> Installing cloudflared (for tunnel setup during setup.py)..."
+echo "==> Installing cloudflared (for setup-bootstrap.py config mode)..."
 if ! command -v cloudflared >/dev/null 2>&1; then
   apt-get update
   apt-get install -y curl gnupg
@@ -55,14 +55,16 @@ chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${APPDATA_ROOT}"
 if [[ -d "${COMPOSE_HOME}" ]]; then
   chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${COMPOSE_HOME}"
 else
-  echo "Clone or copy docker-vps-stack to ${COMPOSE_HOME} before running setup.py"
+  echo "Clone Homelab-in-a-box to ${COMPOSE_HOME} before running setup-bootstrap.py"
 fi
 
-echo "==> Python for setup.py..."
+echo "==> Python for setup scripts..."
 apt-get install -y python3 python3-pip python3-venv 2>/dev/null || true
 
 echo ""
-echo "Done. Run setup as ${DEPLOY_USER} (not root):"
-echo "  sudo -u ${DEPLOY_USER} -H bash -lc 'cd ${COMPOSE_HOME} && pip3 install --user -r scripts/requirements.txt && python3 scripts/setup.py'"
+echo "Done. If Docker was newly installed, ${DEPLOY_USER} must log out and SSH back in."
 echo ""
-echo "Mail-in-a-Box: this stack publishes NO host ports; ingress is Cloudflare Tunnel only."
+echo "Then as ${DEPLOY_USER}:"
+echo "  cd ${COMPOSE_HOME}"
+echo "  python3 scripts/setup-bootstrap.py"
+echo "  ./scripts/compose.sh up -d"

@@ -3,9 +3,9 @@
 import sys
 
 print(
-    "This script was split into two phases:\n"
-    "  1. python3 scripts/setup-bootstrap.py   # Tunnel + Traefik + Portainer\n"
-    "  2. python3 scripts/setup-authelia.py    # Authelia 1FA\n",
+    "Homelab-in-a-box uses two setup scripts:\n"
+    "  1. python3 scripts/setup-bootstrap.py\n"
+    "  2. python3 scripts/setup-authelia.py\n",
     file=sys.stderr,
 )
 sys.exit(1)

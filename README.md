@@ -1,15 +1,17 @@
-# homelab-in-a-box
+# Homelab-in-a-box
 
-Public template for a **Debian VPS** Docker homelab: **Cloudflare Tunnel** ingress (no open firewall ports), **Traefik**, **Portainer**, **Traefik Manager**, and optional **Authelia** (1FA).
+Public template for a **Debian VPS** Docker homelab: **Cloudflare Tunnel**, **Traefik**, **Portainer**, **Traefik Manager**, and **Authelia** (1FA).
 
-**Two-phase setup** so a **headless** server gets remote HTTPS *before* auth is configured.
+**Two-phase setup** so a **headless** server gets remote HTTPS through Cloudflare *before* authentication is configured.
 
 | Phase | Script | What runs | Remote URLs |
 |-------|--------|-----------|-------------|
-| **1** | `setup-bootstrap.py` | Tunnel + Traefik + Portainer + Traefik Manager | `https://port.yourdomain`, `https://traefik.yourdomain` — **no login** |
-| **2** | `setup-authelia.py` | Postgres + Redis + Authelia + forward-auth | Same URLs, **username/password required** |
+| **1** | `scripts/setup-bootstrap.py` | Tunnel + Traefik + Portainer + Traefik Manager | `https://port.yourdomain.app` — **no login** |
+| **2** | `scripts/setup-authelia.py` | Postgres + Redis + Authelia | Same URLs — **username/password** |
 
-> **Security:** Phase 1 exposes Portainer and Traefik on the internet without Authelia. Complete Phase 2 immediately after you confirm the tunnel works.
+> **Security:** Phase 1 exposes Portainer and Traefik without Authelia. Run phase 2 as soon as the tunnel works.
+
+Repository: [github.com/jdepew88/Homelab-in-a-box](https://github.com/jdepew88/Homelab-in-a-box)
 
 ---
 
@@ -19,102 +21,73 @@ Public template for a **Debian VPS** Docker homelab: **Cloudflare Tunnel** ingre
 |---------------|-------------------------------------|
 | `compose*.yaml`, `templates/`, `scripts/` | `.env` — secrets and tunnel token |
 | `.env.example` | `config.yaml` — your domain |
-| | `/opt/appdata/docker-apps/**` — Traefik, Authelia, tunnel credentials |
+| | `/opt/appdata/docker-apps/**` — runtime config and data |
 | | `compose.auth-overrides.yaml` — generated in phase 2 |
-| | `~/authelia-offline-backups/` — optional user DB backup |
-
-Each user runs the setup scripts locally on their VPS; nothing sensitive is stored in this repo.
 
 ---
 
 ## Requirements
 
-- Debian 11/12 VPS (root for bootstrap, then deploy user e.g. `joe`)
-- Domain on **Cloudflare** (orange-cloud DNS)
-- **Cloudflare Zero Trust** (free tier is fine)
-- SSH access to the VPS
+- Debian 11/12 VPS
+- Domain on **Cloudflare** (proxied DNS)
+- **Cloudflare Zero Trust** (free tier works)
+- SSH access
+- Deploy user with `sudo` (examples use `joe`)
 
 ---
 
-## Quick start
+## Setup (fresh Debian VM)
 
-### 1. Clone (on the VPS)
-
-```bash
-sudo apt-get update && sudo apt-get install -y git
-sudo bash -c 'curl -fsSL https://get.docker.com | sh'   # or use install-server.sh below
-git clone https://github.com/jdepew88/docker-vps-stack.git /home/joe/docker-vps-stack
-sudo chown -R joe:joe /home/joe/docker-vps-stack
-```
-
-Or use the install script (Docker + `cloudflared`):
+### 1. Install prerequisites (as root)
 
 ```bash
-git clone https://github.com/jdepew88/docker-vps-stack.git /home/joe/docker-vps-stack
-cd /home/joe/docker-vps-stack
+git clone https://github.com/jdepew88/Homelab-in-a-box.git ~/homelab-in-a-box
+cd ~/homelab-in-a-box
 sudo bash scripts/install-server.sh
 ```
 
-### 2. Phase 1 — Tunnel + Traefik + Portainer (headless)
-
-Run as **joe**, not root:
+If Docker was just installed, **log out and SSH back in** so the `docker` group applies:
 
 ```bash
-cd /home/joe/docker-vps-stack
+exit
+# ssh back in
+groups    # should list docker
+```
+
+### 2. Phase 1 — bootstrap (as deploy user, not root)
+
+```bash
+cd ~/homelab-in-a-box
 chmod +x scripts/compose.sh
 python3 scripts/setup-bootstrap.py
 ./scripts/compose.sh up -d
 ```
 
-#### Headless Cloudflare Tunnel (recommended)
+**Headless tunnel (recommended):** On your laptop, [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create tunnel** → **Docker** → copy the connector token. On the VPS, choose tunnel mode **`token`** and paste the token (it is not shown again).
 
-On your **laptop** (browser):
+Add **Public Hostnames** in the tunnel (service URL must be):
 
-1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel**
-2. Name it (e.g. `vps-88pockets`) → choose **Docker** → copy the **connector token**
-3. Under **Public Hostname**, add routes to `http://traefik:80`:
+```text
+http://traefik:80
+```
 
-   | Public hostname | Service |
-   |-----------------|---------|
-   | `traefik.yourdomain.com` | `http://traefik:80` |
-   | `port.yourdomain.com` | `http://traefik:80` |
-   | `manager.yourdomain.com` | `http://traefik:80` |
-   | `*.yourdomain.com` (optional) | `http://traefik:80` |
+| Hostname example | Points to |
+|------------------|-----------|
+| `traefik.yourdomain.app` | `http://traefik:80` |
+| `port.yourdomain.app` | `http://traefik:80` |
+| `manager.yourdomain.app` | `http://traefik:80` |
+| `*.yourdomain.app` (optional) | `http://traefik:80` |
 
-On the **VPS**, when `setup-bootstrap.py` asks for tunnel mode, choose **`token`** and paste the token.
+Verify: `https://port.yourdomain.app` opens Portainer.
 
-Confirm in a browser:
-
-- `https://port.yourdomain.com` → Portainer setup wizard  
-- `https://traefik.yourdomain.com` → Traefik dashboard  
-- `https://manager.yourdomain.com` → Traefik Manager setup wizard  
-
-#### Alternative: `config` mode
-
-If you can open a browser once for `cloudflared tunnel login` on the VPS (or copy `cert.pem` from another machine), choose **`config`** in the script; it creates the tunnel, DNS routes, and `config.yml` under `/opt/appdata/docker-apps/cloudflared/`.
-
-### 3. Phase 2 — Authelia (1FA)
+### 3. Phase 2 — Authelia
 
 ```bash
 python3 scripts/setup-authelia.py
 ./scripts/compose.sh --profile auth up -d
 ```
 
-- Prompts for **username** and **password**
-- Offers to **backup** `users_database.yml` for offline storage (`scp` to your PC)
-- Notifier: **filesystem** only (no SMTP)
-- Adds `auth.yourdomain.com` and protects Portainer / Traefik / Manager
-
-Test: open `https://port.yourdomain.com` → redirect to `https://auth.yourdomain.com` → sign in.
-
-### 4. Optional apps
-
-```bash
-./scripts/compose.sh --profile rocketchat up -d
-python3 scripts/add_stack.py   # list / register custom stacks
-```
-
-After Authelia, add Rocket.Chat to `compose.auth-overrides.yaml` (middleware line) or use Traefik Manager.
+Add tunnel hostname `auth.yourdomain.app` → `http://traefik:80` if you used explicit hostnames instead of a wildcard.
 
 ---
 
@@ -122,17 +95,16 @@ After Authelia, add Rocket.Chat to `compose.auth-overrides.yaml` (middleware lin
 
 | Path | Purpose |
 |------|---------|
-| `/home/joe/docker-vps-stack` | Compose project, `.env`, scripts |
-| `/opt/appdata/docker-apps` | Traefik, Authelia, Portainer, tunnel config |
+| `~/homelab-in-a-box` | Compose project, `.env`, scripts (default; configurable in setup) |
+| `/opt/appdata/docker-apps` | Persistent app data (default; configurable) |
 
 ---
 
 ## Why two phases?
 
-1. **Headless VPS** — you need working HTTP(S) through the tunnel before you can debug Authelia, Postgres, or labels.
-2. **Portainer** gives you a UI to inspect containers if something fails in phase 2.
-3. **Authelia** depends on Postgres, Redis, correct Traefik middleware, and DNS for `auth.` — easier when ingress already works.
-4. **Public repo** — phase 1 only writes non-auth `.env` fields; phase 2 adds secrets to the same local `.env`.
+1. **Headless VPS** — confirm Cloudflare → Traefik → Portainer before adding Postgres, Redis, and Authelia.
+2. **Portainer** — web UI to inspect containers if phase 2 fails.
+3. **Public repo** — secrets stay in each user’s local `.env` only.
 
 ---
 
@@ -140,28 +112,36 @@ After Authelia, add Rocket.Chat to `compose.auth-overrides.yaml` (middleware lin
 
 | Profile | Services |
 |---------|----------|
-| `tunnel-token` | `cloudflared` (default, uses `CF_TUNNEL_TOKEN`) |
-| `tunnel-config` | `cloudflared-config` (uses `config.yml` + credentials json) |
+| `tunnel-token` | `cloudflared` using `CF_TUNNEL_TOKEN` |
+| `tunnel-config` | `cloudflared-config` using `config.yml` + credentials |
 | `auth` | `postgres`, `redis`, `authelia` |
 | `rocketchat` | MongoDB + Rocket.Chat |
 
-`scripts/compose.sh` selects the tunnel profile from `CF_TUNNEL_MODE` and auto-includes `compose.auth-overrides.yaml` when present.
+`scripts/compose.sh` reads `CF_TUNNEL_MODE` and includes `compose.auth-overrides.yaml` when present.
 
 ---
 
-## Mail-in-a-Box
+## Optional apps
 
-This stack does **not** publish host ports 80/443. MIAB can stay on the same machine if it keeps binding those ports itself and app hostnames use separate DNS names (e.g. `port.domain.com` vs `box.domain.com`).
-
----
-
-## Immich + S3 (later)
-
-Keep photo storage off the VPS disk — use **Cloudflare R2** or S3. See `stacks/immich.compose.yaml.example`.
+```bash
+./scripts/compose.sh --profile rocketchat up -d
+python3 scripts/add_stack.py
+```
 
 ---
 
 ## Troubleshooting
+
+| Problem | What to do |
+|---------|------------|
+| Pasted Cloudflare login URL into bash | Do **not** run the URL as a command. Open it in a browser only, or use **token** mode instead. |
+| Invalid tunnel mode (`2`, `yes`, etc.) | Re-run `setup-bootstrap.py` and enter exactly `token` or `config`. |
+| `cloudflared tunnel list` empty / errors | Run `cloudflared tunnel login`, then re-run bootstrap; or use **token** mode from the dashboard. |
+| `permission denied` on `docker` | Log out and SSH back in after `install-server.sh`, or run `groups` and confirm `docker`. |
+| 502 / blank page | Tunnel hostname must target **`http://traefik:80`** (not `https`, not `localhost`). |
+| Tunnel not connecting | Check `CF_TUNNEL_TOKEN` in `.env` and `docker logs cloudflared`. |
+| Phase 2 not protecting apps | Ensure `compose.auth-overrides.yaml` exists; run `./scripts/compose.sh --profile auth up -d`. |
+| Authelia redirect loop | Add `auth.yourdomain.app` → `http://traefik:80` in the tunnel. |
 
 ```bash
 ./scripts/compose.sh ps
@@ -170,22 +150,20 @@ Keep photo storage off the VPS disk — use **Cloudflare R2** or S3. See `stacks
 ./scripts/compose.sh --profile auth logs authelia
 ```
 
-| Issue | Check |
-|-------|--------|
-| 502 / no route | Tunnel public hostname → `http://traefik:80` (not `https`, not `localhost`) |
-| Tunnel not connecting | `CF_TUNNEL_TOKEN` in `.env`, `docker logs cloudflared` |
-| Authelia loop | `auth.` hostname in tunnel + `access_control` bypass for auth subdomain |
-| Phase 2 not protecting | `compose.auth-overrides.yaml` exists; re-run `./scripts/compose.sh --profile auth up -d` |
+---
+
+## Immich + object storage (later)
+
+Use **Cloudflare R2** or S3 for photo storage instead of VPS disk. See `stacks/immich.compose.yaml.example`.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) if present; otherwise all files in this repo are provided as-is.
+MIT — see [LICENSE](LICENSE).
 
 ## References
 
 - [Authelia (IBRACORP)](https://docs.ibracorp.io/docs/security/authelia)
 - [Traefik Manager](https://github.com/chr0nzz/traefik-manager)
 - [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-- [Rocket.Chat Docker](https://docs.rocket.chat/docs/deploy-with-docker-docker-compose)

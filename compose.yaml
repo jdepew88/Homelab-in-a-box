@@ -1,17 +1,9 @@
-# docker-vps-stack
+# Homelab-in-a-box
 #
-# Phase 1 (bootstrap — remote access first):
-#   python3 scripts/setup-bootstrap.py
-#   ./scripts/compose.sh up -d
-#
-# Phase 2 (Authelia 1FA):
-#   python3 scripts/setup-authelia.py
-#   ./scripts/compose.sh --profile auth up -d
-#
-# Optional apps:
-#   ./scripts/compose.sh --profile rocketchat up -d
+# Phase 1: python3 scripts/setup-bootstrap.py && ./scripts/compose.sh up -d
+# Phase 2: python3 scripts/setup-authelia.py && ./scripts/compose.sh --profile auth up -d
 
-name: vps-stack
+name: homelab-in-a-box
 
 include:
   - path: compose.bootstrap.yaml
