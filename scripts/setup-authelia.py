@@ -133,7 +133,11 @@ def main() -> None:
             "AUTHELIA_JWT_SECRET": jwt_secret,
             "AUTHELIA_SESSION_SECRET": session_secret,
             "AUTHELIA_STORAGE_ENCRYPTION_KEY": storage_key,
+            "AUTHELIA_DB_PASSWORD": authelia_db_password,
             "SUBDOMAIN_AUTH": sub_auth,
+            "COMPOSE_DIR": str(compose_home),
+            "PRIMARY_DOMAIN": domain,
+            "DOMAIN": domain,
         }
         lines = env_path.read_text(encoding="utf-8").splitlines()
         out: list[str] = []

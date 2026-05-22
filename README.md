@@ -248,8 +248,9 @@ Requires `.env` from phase 1.
 
 | Path | Purpose |
 |------|---------|
-| `traefik/traefik.yml` | Traefik static config |
-| `traefik/dynamic/` | Dynamic routes (e.g. Authelia middleware) |
+| `traefik/traefik.yml` | Traefik static config (from `templates/traefik/`) |
+| `traefik/dynamic/config.yml` | Security middlewares ([install_traefik_compose](https://github.com/jdepew88/install_traefik_compose)) |
+| `traefik/dynamic/authelia.yml` | Authelia forward-auth (phase 2) |
 | `cloudflared/` | Tunnel config + credentials (config mode) |
 | `authelia/` | Authelia config and `users_database.yml` |
 | `postgres/` | Authelia database |
@@ -258,6 +259,62 @@ Requires `.env` from phase 1.
 | `traefik-manager/` | Traefik Manager state |
 
 Safe to commit from the repo: `compose*.yaml`, `templates/`, `scripts/`, `.env.example`.
+
+`.env` should include `COMPOSE_DIR`, `PRIMARY_DOMAIN`, and `DOMAIN` (setup writes all three). Older `.env` files with only `DOMAIN` still work — `regenerate-configs.py` fills `PRIMARY_DOMAIN` automatically.
+
+---
+
+## Traefik module (`traefik/`)
+
+Vendored from [install_traefik_compose/traefik](https://github.com/jdepew88/install_traefik_compose/tree/main/traefik) (IBRACORP-style Docker Compose Traefik).
+
+| Location | Use |
+|----------|-----|
+| `traefik/docker-compose.yml` | Optional **Traefik-only** stack (host ports 80/443 + ACME) |
+| `traefik/traefik.yml`, `traefik/config.yml` | Reference for DNS/Let's Encrypt mode |
+| `templates/traefik/` | What the main HIAB stack renders into appdata (tunnel → `:80`) |
+
+The default homelab path uses **`./scripts/compose.sh`** at the repo root, not `traefik/docker-compose.yml`.
+
+---
+
+## Regenerating configs from an existing `.env`
+
+Use this when templates or YAML on disk were fixed but your `.env` is already correct. This **does not** replace `.env`; it re-renders `traefik.yml`, `traefik/dynamic/config.yml`, and related appdata from `templates/` (including middlewares from `install_traefik_compose`).
+
+```bash
+cd ~/homelab-in-a-box
+cp .env .env.bak.$(date +%Y%m%d-%H%M%S)
+python3 scripts/regenerate-configs.py
+./scripts/compose.sh down
+./scripts/compose.sh up -d
+docker ps
+docker logs traefik --tail=100
+docker logs cloudflared --tail=100
+./scripts/compose.sh config | grep -i "Host"
+```
+
+You should see host rules such as `Host(\`port.yourdomain.app\`)` using `DOMAIN` / `PRIMARY_DOMAIN` and your `SUBDOMAIN_*` values from `.env`.
+
+**Alternative:** re-run bootstrap and choose **regenerate** when prompted:
+
+```bash
+python3 scripts/setup-bootstrap.py
+# Choose: regenerate
+```
+
+### Manual `.env` edit, then regenerate
+
+```bash
+cd ~/homelab-in-a-box
+cp .env .env.bak.$(date +%Y%m%d-%H%M%S)
+nano .env
+python3 scripts/regenerate-configs.py
+./scripts/compose.sh down
+./scripts/compose.sh up -d
+```
+
+Required in `.env` for regeneration: `COMPOSE_DIR`, `APPDATA_ROOT`, `PRIMARY_DOMAIN` (or `DOMAIN`), `SUBDOMAIN_*`, `CF_TUNNEL_MODE`, `CF_TUNNEL_NAME`, and `CF_TUNNEL_TOKEN` when mode is `token`.
 
 ---
 
@@ -316,7 +373,28 @@ Log out and SSH back in after `install-server.sh`.
 
 ### Invalid tunnel mode
 
-Only **`token`** or **`config`** are valid. Re-run `setup-bootstrap.py` if you entered `2`, `yes`, or anything else.
+Only **`token`** or **`config`** are valid. Re-run `setup-bootstrap.py` if you entered `2`, `yes`, or anything else. Or use `python3 scripts/regenerate-configs.py` if `.env` is already correct.
+
+### Traefik folders or `traefik.yml` missing
+
+Bootstrap and `regenerate-configs.py` create:
+
+```text
+/opt/appdata/docker-apps/traefik/
+/opt/appdata/docker-apps/traefik/dynamic/
+/opt/appdata/docker-apps/traefik/logs/
+/opt/appdata/docker-apps/traefik/traefik.yml
+```
+
+If those are missing, run:
+
+```bash
+python3 scripts/regenerate-configs.py
+```
+
+### Bad YAML (one line with literal `\n`)
+
+If a template was flattened into a single line, pull the latest repo and run `regenerate-configs.py`. Templates are read with a repair step that converts literal `\n` to real newlines when detected.
 
 ### Pasted a Cloudflare URL into the terminal
 

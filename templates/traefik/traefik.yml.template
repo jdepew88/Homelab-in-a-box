@@ -1,7 +1,10 @@
-# Static Traefik config — placeholders replaced by scripts/setup-bootstrap.py
+# Homelab-in-a-box static Traefik config (Cloudflare Tunnel ingress)
+# Based on install_traefik_compose: https://github.com/jdepew88/install_traefik_compose
 #
 # domain: __DOMAIN__
 # cloudflare_email: __CF_EMAIL__
+#
+# ACME / host 443 setup: see traefik/traefik.yml in this repo (standalone reference)
 
 api:
   dashboard: true
@@ -26,7 +29,7 @@ providers:
     directory: /etc/traefik/dynamic
     watch: true
 
-# Optional: enable when not using Cloudflare Tunnel TLS termination only
+# Optional: Cloudflare DNS ACME (standalone / no tunnel) — requires CF_DNS_API_TOKEN in .env
 # certificatesResolvers:
 #   cloudflare:
 #     acme:

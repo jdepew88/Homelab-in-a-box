@@ -1,0 +1,67 @@
+# Reference dynamic config — file provider routes and middlewares
+# Rendered HIAB copy: templates/traefik/dynamic/config.yml.template → appdata
+
+http:
+  middlewares:
+    chain-no-auth:
+      chain:
+        middlewares:
+          - rate-limit
+          - securityHeaders
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+    securityHeaders:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+        browserXssFilter: true
+        contentTypeNosniff: true
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+        customResponseHeaders:
+          X-Forwarded-Proto: https
+          X-Robots-Tag: none,noarchive,nosnippet,notranslate,noimageindex
+        forceSTSHeader: true
+        hostsProxyHeaders:
+          - X-Forwarded-Host
+        referrerPolicy: same-origin
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 63072000
+
+  routers:
+    # Example file-provider route (replace HOST_IP and domain)
+    plex:
+      entryPoints:
+        - https
+      middlewares:
+        - chain-no-auth
+      rule: Host(`plex.${DOMAIN_NAME}`)
+      service: plex-svc
+      tls:
+        certResolver: letsencrypt
+        options: default
+
+  services:
+    plex-svc:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://HOST_IP_ADDRESS:32400/
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384

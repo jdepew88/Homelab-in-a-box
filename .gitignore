@@ -1,6 +1,8 @@
 .env
 config.yaml
 compose.auth-overrides.yaml
+traefik/.env
+traefik/acme.json
 *.local
 __pycache__/
 *.pyc

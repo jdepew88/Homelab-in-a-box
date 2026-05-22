@@ -1,0 +1,57 @@
+# Dynamic Traefik config — middlewares from install_traefik_compose
+# https://github.com/jdepew88/install_traefik_compose/tree/main/traefik
+# Rendered to: APPDATA_ROOT/traefik/dynamic/config.yml
+
+http:
+  middlewares:
+    chain-no-auth:
+      chain:
+        middlewares:
+          - rate-limit
+          - securityHeaders
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+    securityHeaders:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+        browserXssFilter: true
+        contentTypeNosniff: true
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+        customResponseHeaders:
+          X-Forwarded-Proto: https
+        forceSTSHeader: true
+        hostsProxyHeaders:
+          - X-Forwarded-Host
+        referrerPolicy: same-origin
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 63072000
+
+  # Optional file-provider routes — set HOST_IP in .env or edit after render
+  routers: {}
+  services: {}
+
+# Uncomment and edit to add a backend by IP (example from upstream):
+#
+#  routers:
+#    plex:
+#      entryPoints:
+#        - web
+#      middlewares:
+#        - chain-no-auth
+#      rule: Host(`plex.__DOMAIN__`)
+#      service: plex-svc
+#  services:
+#    plex-svc:
+#      loadBalancer:
+#        servers:
+#          - url: http://__HOST_IP__:32400/

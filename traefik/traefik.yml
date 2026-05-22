@@ -1,0 +1,66 @@
+# Reference static config — DNS/ACME mode (from install_traefik_compose)
+# HIAB Cloudflare Tunnel stack uses templates/traefik/traefik.yml.template instead.
+#
+# Requires: config.yml in the same directory, acme.json (created empty, chmod 600)
+
+api:
+  dashboard: true
+  insecure: true
+
+log:
+  filePath: /etc/traefik/traefik.log
+  level: INFO
+
+accessLog:
+  filePath: /etc/traefik/access.log
+  bufferingSize: 50
+
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+entryPoints:
+  http:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+
+  https:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: ${DOMAIN_NAME}
+            sans:
+              - "*.${DOMAIN_NAME}"
+      middlewares:
+        - securityHeaders@file
+
+serversTransport:
+  insecureSkipVerify: true
+
+providers:
+  providersThrottleDuration: 2s
+  file:
+    filename: /etc/traefik/config.yml
+    watch: true
+  docker:
+    endpoint: tcp://dockersocket:2375
+    watch: true
+    network: proxy
+    exposedByDefault: false
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${EMAIL}
+      storage: /etc/traefik/acme.json
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
