@@ -111,6 +111,36 @@ sudo bash scripts/install-server.sh
 
 `install-server.sh` (run as root) installs Docker and `cloudflared`, creates `/opt/appdata/docker-apps`, and adds your deploy user to the `docker` group.
 
+It also configures `/etc/docker/daemon.json` (via `scripts/configure-docker-daemon.sh`) with:
+
+- **json-file** log driver with rotation (`max-size` **10m**, `max-file` **3**)
+- **live-restore** `true`
+
+Existing `daemon.json` keys are preserved where possible; a timestamped backup is created before changes. Docker is restarted only when the file changes.
+
+`setup-bootstrap.py` runs the same daemon configuration again (with `sudo`) before you start containers, so a pre-existing Docker install still gets the defaults.
+
+Verify after `install-server.sh` or `setup-bootstrap.py`:
+
+```bash
+cat /etc/docker/daemon.json
+docker info | grep -i "Logging Driver"
+```
+
+If Docker fails to restart, check JSON validity and service logs:
+
+```bash
+sudo jq empty /etc/docker/daemon.json
+sudo systemctl status docker --no-pager
+journalctl -u docker --no-pager -n 100
+```
+
+Re-apply daemon settings manually:
+
+```bash
+sudo bash scripts/configure-docker-daemon.sh
+```
+
 ### 2. Refresh group membership
 
 If Docker was newly installed, **log out and SSH back in** so `docker` works without `sudo`:

@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = REPO_ROOT / "templates"
+CONFIGURE_DOCKER_DAEMON = REPO_ROOT / "scripts" / "configure-docker-daemon.sh"
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from setup_lib import (  # noqa: E402
@@ -180,8 +181,16 @@ def _interactive_bootstrap(compose_home: Path, existing: dict[str, str] | None) 
         fail("A system command failed. See output above.", created)
 
 
+def ensure_docker_daemon_config() -> None:
+    if not CONFIGURE_DOCKER_DAEMON.is_file():
+        fail(f"Missing {CONFIGURE_DOCKER_DAEMON}")
+    print("==> Configuring Docker daemon (/etc/docker/daemon.json)...")
+    subprocess.run(["sudo", "bash", str(CONFIGURE_DOCKER_DAEMON)], check=True)
+
+
 def main() -> None:
     require_not_root()
+    ensure_docker_daemon_config()
 
     print("=== Homelab-in-a-box — Phase 1: Bootstrap ===\n")
     print("Tunnel + Traefik + Portainer (Authelia comes in phase 2).")

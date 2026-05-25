@@ -29,6 +29,11 @@ if ! command -v docker >/dev/null 2>&1; then
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=configure-docker-daemon.sh
+source "${SCRIPT_DIR}/configure-docker-daemon.sh"
+configure_docker_daemon
+
 echo "==> Installing cloudflared (for setup-bootstrap.py config mode)..."
 if ! command -v cloudflared >/dev/null 2>&1; then
   apt-get update
@@ -64,7 +69,9 @@ apt-get install -y python3 python3-pip python3-venv 2>/dev/null || true
 echo ""
 echo "Done. If Docker was newly installed, ${DEPLOY_USER} must log out and SSH back in."
 echo ""
+echo "Docker daemon: /etc/docker/daemon.json (json-file logs, live-restore)"
+echo ""
 echo "Then as ${DEPLOY_USER}:"
 echo "  cd ${COMPOSE_HOME}"
 echo "  python3 scripts/setup-bootstrap.py"
-echo "  ./scripts/compose.sh up -d"
+echo "  ./scripts/compose.sh --profile tunnel-token up -d"
