@@ -109,7 +109,7 @@ cd ~/homelab-in-a-box
 sudo bash scripts/install-server.sh
 ```
 
-`install-server.sh` (run as root) installs Docker and `cloudflared`, creates `/opt/appdata/docker-apps`, and adds your deploy user to the `docker` group.
+`scripts/install-server.sh` or `scripts/initialserver.sh` (run as root) installs Docker and `cloudflared`, creates `/opt/appdata/docker-apps`, installs Python packages from `requirements.txt` into `.venv`, and adds your deploy user to the `docker` group.
 
 It also configures `/etc/docker/daemon.json` (via `scripts/configure-docker-daemon.sh`) with:
 
@@ -207,11 +207,23 @@ The stack is **not complete** until phase 2 works.
 
 ## Traefik Manager password (bcrypt)
 
-Traefik Manager stores its login password as a bcrypt hash in `manager.yml` under appdata (for example `/opt/appdata/docker-apps/traefik-manager/config/manager.yml`). Generate a new hash:
+Traefik Manager stores its login password as a bcrypt hash in `manager.yml` under appdata (for example `/opt/appdata/docker-apps/traefik-manager/config/manager.yml`).
+
+`scripts/install-server.sh` (also `scripts/initialserver.sh`) installs `requirements.txt` into `.venv` during server bootstrap. Generate a new hash from the repo:
 
 ```bash
-sudo apt update
-sudo apt install -y python3-bcrypt
+cd ~/homelab-in-a-box
+source .venv/bin/activate
+python3 scripts/newhash.py
+```
+
+If `.venv` is missing (manual setup):
+
+```bash
+cd ~/homelab-in-a-box
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 python3 scripts/newhash.py
 ```
 

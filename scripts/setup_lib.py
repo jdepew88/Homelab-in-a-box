@@ -504,7 +504,10 @@ def hash_password_argon2(password: str) -> str:
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         err = (result.stderr or result.stdout or "").strip()
-        fail(f"Could not hash password via Docker.\n{err}\nInstall: pip3 install -r scripts/requirements.txt")
+        fail(
+            f"Could not hash password via Docker.\n{err}\n"
+            "Install: pip install -r requirements.txt (or run scripts/install-server.sh)"
+        )
     for line in (result.stdout or "").splitlines():
         if line.startswith("$argon2"):
             return line.strip()

@@ -1,1 +1,2 @@
-argon2-cffi>=23.1.0
+# Use repo-root requirements.txt (kept for backward-compatible paths in docs/scripts).
+-r ../requirements.txt

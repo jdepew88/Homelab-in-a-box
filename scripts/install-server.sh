@@ -63,8 +63,38 @@ else
   echo "Clone Homelab-in-a-box to ${COMPOSE_HOME} before running setup-bootstrap.py"
 fi
 
+install_python_requirements() {
+  echo "Installing Python requirements..."
+  apt-get update
+  apt-get install -y python3 python3-venv python3-pip
+
+  local repo_dir
+  repo_dir="$(cd "${SCRIPT_DIR}/.." && pwd)"
+  if [[ ! -f "${repo_dir}/requirements.txt" ]]; then
+    repo_dir="${SCRIPT_DIR}"
+  fi
+  if [[ ! -f "${repo_dir}/requirements.txt" ]]; then
+    echo "ERROR: requirements.txt not found."
+    exit 1
+  fi
+
+  cd "${repo_dir}"
+  python3 -m venv .venv
+  # shellcheck source=/dev/null
+  . .venv/bin/activate
+  python -m pip install --upgrade pip
+  pip install -r requirements.txt
+  deactivate 2>/dev/null || true
+
+  chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${repo_dir}/.venv"
+  if [[ -d "${COMPOSE_HOME}" && "${COMPOSE_HOME}" != "${repo_dir}" ]]; then
+    echo "Note: requirements installed in ${repo_dir}/.venv (run install-server from cloned repo path)."
+  fi
+  echo "Python requirements installed in ${repo_dir}/.venv"
+}
+
 echo "==> Python for setup scripts..."
-apt-get install -y python3 python3-pip python3-venv 2>/dev/null || true
+install_python_requirements
 
 echo ""
 echo "Done. If Docker was newly installed, ${DEPLOY_USER} must log out and SSH back in."
