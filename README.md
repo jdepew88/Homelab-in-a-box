@@ -131,8 +131,29 @@ Run as your **deploy user**, not root:
 cd ~/homelab-in-a-box
 python3 scripts/setup-bootstrap.py
 chmod +x scripts/compose.sh
-./scripts/compose.sh up -d
+./scripts/compose.sh --profile tunnel-token up -d
 ```
+
+**Bootstrap-only** (no Authelia, no Rocket.Chat, no `compose.yaml`):
+
+```bash
+cd /home/joe/homelab-in-a-box
+docker compose -f compose.bootstrap.yaml up -d
+```
+
+With the Cloudflare tunnel token profile (when `CF_TUNNEL_TOKEN` is set in `.env`):
+
+```bash
+docker compose -f compose.bootstrap.yaml --profile tunnel-token up -d
+```
+
+Do **not** combine files like this — it loads `compose.bootstrap.yaml` twice (once via `compose.yaml` `include`, once via `-f`) and can cause duplicate merge errors:
+
+```bash
+docker compose -f compose.yaml -f compose.bootstrap.yaml up -d   # wrong
+```
+
+After phase 1, use `./scripts/compose.sh` (which uses `compose.yaml` only) for the full stack.
 
 Check in a browser (no login yet):
 
@@ -151,6 +172,63 @@ python3 scripts/setup-authelia.py
 Sign in at `https://auth.<your-domain>`, then reopen Portainer or Traefik — you should be prompted for credentials.
 
 The stack is **not complete** until phase 2 works.
+
+---
+
+## Traefik Manager password (bcrypt)
+
+Traefik Manager stores its login password as a bcrypt hash in `manager.yml` under appdata (for example `/opt/appdata/docker-apps/traefik-manager/config/manager.yml`). Generate a new hash:
+
+```bash
+sudo apt update
+sudo apt install -y python3-bcrypt
+python3 scripts/newhash.py
+```
+
+Paste the printed hash into `manager.yml` (replacing the existing bcrypt password field). Bcrypt hashes usually start with `$2b$12$`.
+
+---
+
+## Verify bootstrap
+
+After `docker compose -f compose.bootstrap.yaml up -d` (and tunnel profile if used):
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker inspect portainer --format '{{json .Config.Labels}}' | jq
+curl -I -H "Host: port.jrtechconsult.com" http://127.0.0.1
+curl -I -H "Host: manager.jrtechconsult.com" http://127.0.0.1
+curl -I -H "Host: traefik.jrtechconsult.com" http://127.0.0.1
+docker logs traefik --tail=100
+docker logs traefik-manager --tail=100
+```
+
+Replace `jrtechconsult.com` and subdomains with your `DOMAIN` and `SUBDOMAIN_*` values from `.env`.
+
+Validate Compose before starting:
+
+```bash
+docker compose -f compose.bootstrap.yaml config
+```
+
+---
+
+## Traefik Manager `domains` in `manager.yml`
+
+If Traefik Manager logs show:
+
+```text
+Domains: ['example.com']
+```
+
+edit `manager.yml` so it lists your real domain, for example:
+
+```yaml
+domains:
+  - jrtechconsult.com
+```
+
+Docker Compose expands `${DOMAIN}` in **Compose labels and environment**, but **not** inside arbitrary mounted files such as `manager.yml` unless the application reads those variables itself. Set the domain explicitly in `manager.yml` after bootstrap or when you change `DOMAIN` in `.env`.
 
 ---
 
@@ -189,7 +267,8 @@ When `setup-bootstrap.py` asks for **tunnel mode**, type **`token`**, then paste
 Then:
 
 ```bash
-./scripts/compose.sh up -d
+docker compose -f compose.bootstrap.yaml --profile tunnel-token up -d
+# or: ./scripts/compose.sh --profile tunnel-token up -d
 docker logs cloudflared --tail=50
 ```
 
@@ -256,7 +335,8 @@ Requires `.env` from phase 1.
 | `postgres/` | Authelia database |
 | `redis/` | Authelia sessions |
 | `portainer/data/` | Portainer data |
-| `traefik-manager/` | Traefik Manager state |
+| `traefik-manager/config/manager.yml` | Traefik Manager login + `domains` list (edit domain by hand) |
+| `traefik-manager/` | Traefik Manager backups and state |
 
 Safe to commit from the repo: `compose*.yaml`, `templates/`, `scripts/`, `.env.example`.
 

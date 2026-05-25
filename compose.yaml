@@ -1,7 +1,12 @@
-# Homelab-in-a-box
+# Full stack (bootstrap + optional auth + optional Rocket.Chat)
 #
-# Phase 1: python3 scripts/setup-bootstrap.py && ./scripts/compose.sh up -d
-# Phase 2: python3 scripts/setup-authelia.py && ./scripts/compose.sh --profile auth up -d
+# Phase 1:  ./scripts/compose.sh --profile tunnel-token up -d
+# Phase 2:  ./scripts/compose.sh --profile auth up -d
+#
+# Bootstrap-only (no auth, no Rocket.Chat) — use compose.bootstrap.yaml directly:
+#   docker compose -f compose.bootstrap.yaml --profile tunnel-token up -d
+# Do NOT run: docker compose -f compose.yaml -f compose.bootstrap.yaml up -d
+# (that loads compose.bootstrap.yaml twice via include + -f)
 
 name: homelab-in-a-box
 

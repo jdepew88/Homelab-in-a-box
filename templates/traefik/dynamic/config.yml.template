@@ -1,5 +1,4 @@
-# Dynamic Traefik config — middlewares from install_traefik_compose
-# https://github.com/jdepew88/install_traefik_compose/tree/main/traefik
+# Dynamic Traefik middlewares — bootstrap (no duplicate routers; Docker labels define routes)
 # Rendered to: APPDATA_ROOT/traefik/dynamic/config.yml
 
 http:
@@ -26,6 +25,7 @@ http:
           X-Forwarded-Proto: https
         customResponseHeaders:
           X-Forwarded-Proto: https
+          X-Robots-Tag: "none,noarchive,nosnippet,notranslate,noimageindex"
         forceSTSHeader: true
         hostsProxyHeaders:
           - X-Forwarded-Host
@@ -35,23 +35,3 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
         stsSeconds: 63072000
-
-  # Optional file-provider routes — set HOST_IP in .env or edit after render
-  routers: {}
-  services: {}
-
-# Uncomment and edit to add a backend by IP (example from upstream):
-#
-#  routers:
-#    plex:
-#      entryPoints:
-#        - web
-#      middlewares:
-#        - chain-no-auth
-#      rule: Host(`plex.__DOMAIN__`)
-#      service: plex-svc
-#  services:
-#    plex-svc:
-#      loadBalancer:
-#        servers:
-#          - url: http://__HOST_IP__:32400/

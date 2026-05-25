@@ -1,5 +1,11 @@
-# Phase 1 — ingress only (no Authelia). Remote access via Cloudflare Tunnel first.
-# After setup-bootstrap.py:  docker compose up -d
+# Bootstrap stack only — do not combine with compose.yaml (duplicate merge).
+#
+#   docker compose -f compose.bootstrap.yaml --profile tunnel-token up -d
+#
+# Requires .env in the current directory (see .env.example).
+# Does not start Authelia or Rocket.Chat.
+
+name: homelab-in-a-box
 
 services:
   cloudflared:
@@ -52,6 +58,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.traefik-dashboard.rule=Host(`${SUBDOMAIN_TRAEFIK}.${DOMAIN}`)
       - traefik.http.routers.traefik-dashboard.entrypoints=web
+      - traefik.http.routers.traefik-dashboard.middlewares=chain-no-auth@file
       - traefik.http.routers.traefik-dashboard.service=api@internal
 
   socket-proxy:
@@ -90,6 +97,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.traefik-manager.rule=Host(`${SUBDOMAIN_MANAGER}.${DOMAIN}`)
       - traefik.http.routers.traefik-manager.entrypoints=web
+      - traefik.http.routers.traefik-manager.middlewares=chain-no-auth@file
       - traefik.http.services.traefik-manager.loadbalancer.server.port=5000
     depends_on:
       - traefik
@@ -108,6 +116,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.portainer.rule=Host(`${SUBDOMAIN_PORTAINER}.${DOMAIN}`)
       - traefik.http.routers.portainer.entrypoints=web
+      - traefik.http.routers.portainer.middlewares=chain-no-auth@file
       - traefik.http.services.portainer.loadbalancer.server.port=9000
 
 networks:
